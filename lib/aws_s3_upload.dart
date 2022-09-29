@@ -24,7 +24,7 @@ class AwsS3 {
     required String bucket,
 
     /// The file to upload
-    required File file,
+    required List<int> bytes,
 
     /// The key to save this file as. Will override destDir and filename if set.
     String? key,
@@ -46,15 +46,20 @@ class AwsS3 {
     String contentType = 'binary/octet-stream',
   }) async {
     final endpoint = 'https://$bucket.s3.$region.amazonaws.com';
-    final uploadKey = key ?? '$destDir/${filename ?? path.basename(file.path)}';
+    final uploadKey = key ?? '$destDir/${filename ?? "file"}';
 
-    final stream = http.ByteStream(Stream.castFrom(file.openRead()));
-    final length = await file.length();
+    final stream = http.ByteStream(Stream<List<int>>.value(bytes));
+    final length = bytes.length;
 
     final uri = Uri.parse(endpoint);
     final req = http.MultipartRequest("POST", uri);
-    final multipartFile = http.MultipartFile('file', stream, length,
-        filename: path.basename(file.path));
+    final multipartFile = http.MultipartFile(
+      'file',
+      stream,
+      length,
+      filename: key,
+    );
+
     final policy = Policy.fromS3PresignedPost(
         uploadKey, bucket, accessKey, 15, length, acl,
         region: region);
